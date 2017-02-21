@@ -147,8 +147,6 @@ inputs:
       default: "%%session.repo%%"
     appname:
       default: "wp-app"
-    deployname:
-      default: "wordpress-deploy"
     domain:
       default: "demo.applatix.net"
 steps:
