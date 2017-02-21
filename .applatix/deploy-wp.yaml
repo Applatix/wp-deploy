@@ -71,14 +71,12 @@ inputs:
       default: "%%session.artifacts%%"
     appname:
       default: "wp-app"
-    deployname:
-      default: "mysql-deploy"
     domain:
       default: "demo.applatix.net"
 application:
   name: "%%appname%%"
 deployment:
-  name: "%%deployname%%"
+  name: "mysql-deploy"
 scale:
   min: 1
 external_routes:
@@ -111,14 +109,12 @@ inputs:
       default: "%%session.artifacts%%"
     appname:
       default: "wp-app"
-    deployname:
-      default: "wordpress-deploy"
     domain:
       default: "demo.applatix.net"
 application:
   name: "%%appname%%"
 deployment:
-  name: "%%deployname%%"
+  name: "wordpress-deploy"
 scale:
   min: 1
 external_routes:
