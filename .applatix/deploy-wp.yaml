@@ -146,7 +146,7 @@ inputs:
     repo:
       default: "%%session.repo%%"
     appname:
-      default: "wordpress-app"
+      default: "wp-app"
     deployname:
       default: "wordpress-deploy"
     domain:
@@ -158,7 +158,7 @@ steps:
       template: deploy-mysql
       parameters:
         code: "%%steps.checkout.code%%"
-    deploy-wp:
+  - deploy-wp:
       template: deploy-wordpress
       parameters:
         code: "%%steps.checkout.code%%"
