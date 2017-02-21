@@ -28,7 +28,6 @@ inputs:
       default: sh -c 'ls -l /src'
 labels:
   "release": "M7"
-
 ---
 
 ---
@@ -40,7 +39,7 @@ container:
     mem_mib: 750
     cpu_cores: 0.5
   image: "wordpress:latest"
-  docker_options: -e WORDPRESS_DB_HOST=db:3306 -e WORDPRESS_DB_PASSWORD=wordpress
+  docker_options: -e WORDPRESS_DB_HOST=mysql:3306 -e WORDPRESS_DB_PASSWORD=wordpress
   readiness_probe:
     exec:
       command: "%%PROBE_CMD%%"
