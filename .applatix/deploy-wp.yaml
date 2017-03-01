@@ -1,12 +1,12 @@
 ---
 type: service_template
 subtype: container
-name: wordpress-mysql-deployment-container
+name: nginx-deployment-container
 container:
   resources:
     mem_mib: 1024
     cpu_cores: 0.3
-  image: "mysql:5.7"
+  image: "mageinferno/magento2-nginx:1.11-1"
   docker_options: -e MYSQL_ROOT_PASSWORD=wordpress -e MYSQL_DATABASE=wordpress -e MYSQL_USER=wordpress -e MYSQL_PASSWORD=wordpress
   readiness_probe:
     exec:
@@ -33,13 +33,45 @@ labels:
 ---
 type: service_template
 subtype: container
-name: wordpress-deployment-container
+name: php-deployment-container
+container:
+  resources:
+    mem_mib: 1024
+    cpu_cores: 0.3
+  image: "mageinferno/magento2-php:7.0-fpm-1"
+  docker_options: -e MYSQL_ROOT_PASSWORD=wordpress -e MYSQL_DATABASE=wordpress -e MYSQL_USER=wordpress -e MYSQL_PASSWORD=wordpress
+  readiness_probe:
+    exec:
+      command: "%%PROBE_CMD%%"
+    initial_delay_seconds: 30
+    timeout_seconds: 5
+  liveness_probe:
+    exec:
+      command: "%%PROBE_CMD%%"
+    initial_delay_seconds: 30
+    timeout_seconds: 5
+inputs:
+  artifacts:
+    - from: "%%code%%"
+      path: "/src"
+  parameters:
+    code:
+    PROBE_CMD:
+      default: sh -c 'ls -l /src'
+labels:
+  "release": "M7"
+---
+
+---
+type: service_template
+subtype: container
+name: database-deployment-container
 container:
   resources:
     mem_mib: 750
     cpu_cores: 0.5
-  image: "wordpress:latest"
-  docker_options: -e WORDPRESS_DB_HOST=mysql:3306 -e WORDPRESS_DB_PASSWORD=wordpress
+  image: "percona:5.7"
+  docker_options: -e MYSQL_ROOT_PASSWORD=magento2 -e MYSQL_DATABASE=magento2 -e MYSQL_USER=magento2 -e MYSQL_PASSWORD=magento2
   readiness_probe:
     exec:
       command: "%%PROBE_CMD%%"
@@ -63,8 +95,39 @@ labels:
 
 ---
 type: service_template
+subtype: container
+name: setup-deployment
+container:
+  resources:
+    mem_mib: 750
+    cpu_cores: 0.5
+  image: "mageinferno/magento2-php:7.0-fpm-1"
+  docker_options: 
+  command: /usr/local/bin/mage-setup -e M2SETUP_DB_HOST=mysql:3306 -e  M2SETUP_DB_NAME=magento2 -e M2SETUP_DB_USER=magento2 -e M2SETUP_DB_PASSWORD=magento2 -e M2SETUP_BASE_URL=http://m2.localhost:8000/ -e M2SETUP_ADMIN_FIRSTNAME=Admin -e M2SETUP_ADMIN_LASTNAME=User -e M2SETUP_ADMIN_EMAIL=dummy@gmail.com -e M2SETUP_ADMIN_USER=magento2 -e M2SETUP_ADMIN_PASSWORD=magento2 -e M2SETUP_VERSION=2.1.5 -e M2SETUP_USE_SAMPLE_DATA=true -e M2SETUP_USE_ARCHIVE=true -e M2SETUP_USE_COMPOSER_ENTERPRISE=false 
+  readiness_probe:
+    exec:
+      command: "%%PROBE_CMD%%"
+    initial_delay_seconds: 30
+    timeout_seconds: 5
+  liveness_probe:
+    exec:
+      command: "%%PROBE_CMD%%"
+    initial_delay_seconds: 30
+    timeout_seconds: 5
+inputs:
+  artifacts:
+    - from: "%%code%%"
+      path: "/src"
+  parameters:
+    code:
+    PROBE_CMD:
+      default: sh -c 'ls -l /src'
+labels:
+  "release": "M7"
+---
+type: service_template
 subtype: deployment
-name: wordpress-deploy-mysql
+name: magento-deploy-mysql
 inputs:
   parameters:
     code:
@@ -76,7 +139,7 @@ inputs:
 application:
   name: "%%appname%%"
 deployment:
-  name: "wordpress-mysql-deploy"
+  name: "magento-mysql-deploy"
 scale:
   min: 1
 external_routes:
@@ -95,30 +158,30 @@ internal_routes:
         target_port: 3306
 containers:
   - server:
-      template: wordpress-mysql-deployment-container
+      template: database-deployment-container
       parameters:
         PROBE_CMD: sh -c 'ls -l /src'
        
 ---
 type: service_template
 subtype: deployment
-name: deploy-wordpress
+name: deploy-magento
 inputs:
   parameters:
     code:
       default: "%%session.artifacts%%"
     appname:
-      default: "wp-app"
+      default: "magento-app"
     domain:
       default: "demo.applatix.net"
 application:
   name: "%%appname%%"
 deployment:
-  name: "wordpress-deploy"
+  name: "magento-deploy"
 scale:
   min: 1
 external_routes:
-  - name: wpapp
+  - name: magentoapp
     dns_prefix:
     dns_domain: "%%domain%%"
     target_port: 80
@@ -127,7 +190,7 @@ external_routes:
       - 0.0.0.0/0
 containers:
   - server:
-      template: wordpress-deployment-container
+      template: nginx-deployment-container
       parameters:
         PROBE_CMD: sh -c 'ls -l /src'
 
@@ -149,7 +212,7 @@ steps:
   - checkout:
       template: axscm-checkout
   - deploy-mysql:
-      template: wordpress-deploy-mysql
+      template: magento-deploy-mysql
       parameters:
         code: "%%steps.checkout.code%%"
   - deploy-wp:
